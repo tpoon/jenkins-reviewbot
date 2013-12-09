@@ -35,6 +35,7 @@ import hudson.remoting.VirtualChannel;
 import hudson.tasks.BuildWrapper;
 import hudson.util.IOException2;
 import hudson.util.VariableResolver;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -162,7 +163,7 @@ public class ReviewboardParameterValue extends ParameterValue {
   private void applyPatch(BuildListener listener, FilePath patch) throws IOException, InterruptedException {
     listener.getLogger().println("Applying "+ ReviewboardNote.encodeTo("the diff"));
     try {
-      patch.act(new ApplyTask());
+      patch.act(new ApplyTask(listener));
     } catch (IOException e) {
       listener.getLogger().println("Failed to apply patch due to:");
       e.printStackTrace(listener.getLogger());
@@ -219,18 +220,27 @@ public class ReviewboardParameterValue extends ParameterValue {
 
   static class ApplyTask implements FilePath.FileCallable<Void> {
     private static final long serialVersionUID = 1L;
+    private BuildListener listener;
+
+    public ApplyTask(BuildListener listener) {
+      this.listener = listener;
+    }
 
     public Void invoke(File diff, VirtualChannel channel) throws IOException, InterruptedException {
-      ContextualPatch patch = ContextualPatch.create(diff,diff.getParentFile());
-      try {
-        List<ContextualPatch.PatchReport> reports = patch.patch(false);
-        for (ContextualPatch.PatchReport r : reports) {
-          if (r.getFailure()!=null)
-            throw new IOException("Failed to patch " + r.getFile(), r.getFailure());
-        }
-      } catch (PatchException e) {
-        throw new IOException2("Failed to apply the patch: "+diff,e);
+
+      String[] patchCommandParts = new String[]{"patch", "-p1", "-b", "-f", "--verbose",
+              "-d", diff.getParentFile().getAbsolutePath(),
+              "-i", diff.getAbsolutePath()};
+
+      listener.getLogger().println("Running command: "+StringUtils.join(patchCommandParts, " "));
+      Process process = Runtime.getRuntime().exec(patchCommandParts);
+      int exitValue = process.waitFor();
+      String patchOutput = IOUtils.toString(process.getInputStream())+"\n\n"+IOUtils.toString(process.getErrorStream());
+      listener.getLogger().println("Patch results:\n"+patchOutput);
+      if (exitValue != 0) {
+          throw new IOException("Failed to patch file (exit value "+exitValue+"): "+patchOutput);
       }
+
       return null;
     }
   }

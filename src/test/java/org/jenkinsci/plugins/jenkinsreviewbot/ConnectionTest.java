@@ -18,6 +18,7 @@ public class ConnectionTest {
           System.getProperty("reviewboard.user"),
           System.getProperty("reviewboard.pwd"));
 
+  @Ignore
   @Test
   public void testDiff() throws Exception {
     String diff = con.getDiffAsString("https://reviewboard.eng.vmware.com/r/475848/");
@@ -27,8 +28,10 @@ public class ConnectionTest {
   @Test
   public void testPending() throws Exception {
     int count = con.getPendingReviews(1).size();
+    System.out.println("count="+count);
   }
 
+  @Ignore
   @Test
   public void testBranch() throws Exception {
     String branch = con.getBranch("https://reviewboard.eng.vmware.com/r/514656/");

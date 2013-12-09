@@ -52,7 +52,12 @@ import java.util.regex.Pattern;
  */
 public class ReviewboardConnection {
 
+  // Date format for Review Board version 1.6 and earlier
   private static final SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+  // Date format for Review Board version 1.7+
+  private static final SimpleDateFormat iso8601Formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+
   private static final long HOUR = 60 * 60 * 1000;
 
   private final HttpClient http;
@@ -73,7 +78,7 @@ public class ReviewboardConnection {
 
   private void initializeAuthentication() {
     String host = extractHost(reviewboardURL);
-    http.getState().setCredentials(new AuthScope(host, 443, "Web API"),
+    http.getState().setCredentials(new AuthScope(host, -1, "Web API"),
         new UsernamePasswordCredentials(reviewboardUsername, reviewboardPassword));
     http.getParams().setAuthenticationPreemptive(true);
   }
@@ -223,7 +228,11 @@ public class ReviewboardConnection {
     try {
       return formatter.parse(str);
     } catch (ParseException e) {
-      throw new RuntimeException(e);
+      try {
+        return iso8601Formatter.parse(str);
+      } catch (ParseException e2) {
+        throw new RuntimeException("Could not parse date from Review Board: "+e+", "+e2);
+      }
     }
   }
 

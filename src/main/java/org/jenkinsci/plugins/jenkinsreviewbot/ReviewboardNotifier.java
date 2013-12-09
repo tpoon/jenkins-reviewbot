@@ -30,9 +30,11 @@ import hudson.matrix.MatrixBuild;
 import hudson.model.*;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * User: ymeymann
@@ -40,6 +42,7 @@ import java.io.IOException;
  */
 public class ReviewboardNotifier extends Notifier implements MatrixAggregatable {
 
+  private static final int NUM_LOG_LINES = 10;
   private final boolean shipItOnSuccess;
 
   @DataBoundConstructor
@@ -72,13 +75,14 @@ public class ReviewboardNotifier extends Notifier implements MatrixAggregatable 
     Result result = build.getResult();
     try {
       String link = build.getEnvironment(listener).get("BUILD_URL");
+      List<String> logs = build.getLog(NUM_LOG_LINES);
       boolean patchFailed = rbParam.isPatchFailed();
       boolean success = result.equals(Result.SUCCESS);
       boolean unstable = result.equals(Result.UNSTABLE);
       String msg = patchFailed ? Messages.ReviewboardNotifier_PatchError():
-                   success     ? Messages.ReviewboardNotifier_BuildSuccess() + " " + link:
-                   unstable    ? Messages.ReviewboardNotifier_BuildUnstable() + " " + link:
-                                 Messages.ReviewboardNotifier_BuildFailure() + " " + link;
+                   success     ? Messages.ReviewboardNotifier_BuildSuccess() + " " + link :
+                   unstable    ? Messages.ReviewboardNotifier_BuildUnstable() + " " + link + "\n" + StringUtils.join(logs, "\n"):
+                                 Messages.ReviewboardNotifier_BuildFailure() + " " + link + "\n" + StringUtils.join(logs, "\n");
 
       rbParam.getConnection().postComment(url, msg, success && getShipItOnSuccess());
     } catch (Exception e) {
