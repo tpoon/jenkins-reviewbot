@@ -34,6 +34,7 @@ import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -76,6 +77,9 @@ public class ReviewboardNotifier extends Notifier implements MatrixAggregatable 
     try {
       String link = build.getEnvironment(listener).get("BUILD_URL");
       List<String> logs = build.getLog(NUM_LOG_LINES);
+      if (logs == null) {
+        logs = new ArrayList<String>();
+      }
       boolean patchFailed = rbParam.isPatchFailed();
       boolean success = result.equals(Result.SUCCESS);
       boolean unstable = result.equals(Result.UNSTABLE);

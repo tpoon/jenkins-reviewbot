@@ -228,7 +228,7 @@ public class ReviewboardParameterValue extends ParameterValue {
 
     public Void invoke(File diff, VirtualChannel channel) throws IOException, InterruptedException {
 
-      String[] patchCommandParts = new String[]{"patch", "-p1", "-b", "-f", "--verbose",
+      String[] patchCommandParts = new String[]{"patch", "-p1", "-f", "--verbose",
               "-d", diff.getParentFile().getAbsolutePath(),
               "-i", diff.getAbsolutePath()};
 
