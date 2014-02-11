@@ -2,4 +2,16 @@
   <f:entry title="ShipIt" description="Mark review with [Ship It] when build is successful" field="shipItOnSuccess">
     <f:checkbox />
   </f:entry>
+  <f:entry title="Log excerpt: regular expression" description="Regular expression to extract lines from the build log and post to Review Board" field="excerptRegex">
+    <f:textbox default="(?i)\b(cannot|error|exception|fatal|fail(ed|ure)|un(defined|resolved))\b"/>
+  </f:entry>
+  <f:entry title="Log excerpt: lines before" description="Number of lines before the matching lines to include in the excerpt" field="excerptLinesBefore">
+    <f:textbox default="10" clazz="required number"/>
+  </f:entry>
+  <f:entry title="Log excerpt: lines after" description="Number of lines after the matching lines to include in the excerpt" field="excerptLinesAfter">
+    <f:textbox default="10" clazz="required number"/>
+  </f:entry>
+  <f:entry title="Log excerpt: default lines" description="Number of lines to show (counted from the end) if no matches are found" field="excerptDefaultLines">
+    <f:textbox default="10" clazz="required number"/>
+  </f:entry>
 </j:jelly>

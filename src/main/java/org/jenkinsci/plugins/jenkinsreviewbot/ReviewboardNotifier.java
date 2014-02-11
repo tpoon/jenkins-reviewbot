@@ -43,16 +43,43 @@ import java.util.List;
  */
 public class ReviewboardNotifier extends Notifier implements MatrixAggregatable {
 
-  private static final int NUM_LOG_LINES = 10;
+  /**
+   * Maximum number of log lines to fetch from the Jenkins project
+   */
+  private static final int MAX_NUM_LOG_LINES = 100000;
   private final boolean shipItOnSuccess;
+  private final String excerptRegex;
+  private final String excerptLinesBefore;
+  private final String excerptLinesAfter;
+  private final String excerptDefaultLines;
 
   @DataBoundConstructor
-  public ReviewboardNotifier(boolean shipItOnSuccess) {
+  public ReviewboardNotifier(boolean shipItOnSuccess, String excerptRegex, String excerptLinesBefore, String excerptLinesAfter, String excerptDefaultLines) {
     this.shipItOnSuccess = shipItOnSuccess;
+    this.excerptRegex = excerptRegex;
+    this.excerptLinesBefore = excerptLinesBefore;
+    this.excerptLinesAfter = excerptLinesAfter;
+    this.excerptDefaultLines = excerptDefaultLines;
   }
 
   public boolean getShipItOnSuccess() {
     return shipItOnSuccess;
+  }
+
+  public String getExcerptRegex() {
+    return excerptRegex;
+  }
+
+  public String getExcerptLinesBefore() {
+    return excerptLinesBefore;
+  }
+
+  public String getExcerptLinesAfter() {
+    return excerptLinesAfter;
+  }
+
+  public String getExcerptDefaultLines() {
+    return excerptDefaultLines;
   }
 
   public BuildStepMonitor getRequiredMonitorService() {
@@ -76,23 +103,29 @@ public class ReviewboardNotifier extends Notifier implements MatrixAggregatable 
     Result result = build.getResult();
     try {
       String link = build.getEnvironment(listener).get("BUILD_URL");
-      List<String> logs = build.getLog(NUM_LOG_LINES);
-      if (logs == null) {
-        logs = new ArrayList<String>();
-      }
+      String logExcerpt = getLogExcerpt(build);
       boolean patchFailed = rbParam.isPatchFailed();
       boolean success = result.equals(Result.SUCCESS);
       boolean unstable = result.equals(Result.UNSTABLE);
-      String msg = patchFailed ? Messages.ReviewboardNotifier_PatchError():
+      String msg = patchFailed ? Messages.ReviewboardNotifier_PatchError() + "\n" + logExcerpt :
                    success     ? Messages.ReviewboardNotifier_BuildSuccess() + " " + link :
-                   unstable    ? Messages.ReviewboardNotifier_BuildUnstable() + " " + link + "\n" + StringUtils.join(logs, "\n"):
-                                 Messages.ReviewboardNotifier_BuildFailure() + " " + link + "\n" + StringUtils.join(logs, "\n");
+                   unstable    ? Messages.ReviewboardNotifier_BuildUnstable() + " " + link + "\n" + logExcerpt :
+                                 Messages.ReviewboardNotifier_BuildFailure() + " " + link + "\n" + logExcerpt;
 
-      rbParam.getConnection().postComment(url, msg, success && getShipItOnSuccess());
+      rbParam.getConnection().postComment(url, build.getProject().getName()+": "+msg, success && getShipItOnSuccess());
     } catch (Exception e) {
       listener.getLogger().println("Error posting to reviewboard: " + e.toString());
     }
     return true;
+  }
+
+  private String getLogExcerpt(AbstractBuild build) throws Exception {
+    List<String> logs = (List<String>)build.getLog(MAX_NUM_LOG_LINES);
+    if (logs == null) {
+      logs = new ArrayList<String>();
+    }
+    return LogFormatterUtil.getLogExcerpt(logs, excerptRegex,
+        Integer.parseInt(excerptLinesBefore), Integer.parseInt(excerptLinesAfter), Integer.parseInt(excerptDefaultLines));
   }
 
   @Override
